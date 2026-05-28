@@ -1,5 +1,5 @@
 // 🔑 Google Sheets Cloud Gateway Architecture
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxg14CWxLWRYy8q8AEN50aMeUWPJN4nrURSXL0I4I6lyFubPjyH_eyQy5KJtxN6iY02eg/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec";
 const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
 const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
 const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
@@ -309,7 +309,7 @@ function setupSystemEventHandlers() {
             const itemCode = encodeURIComponent(activeRecord[aKey] || 'unknown');
             
             // 🚨 REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL 🚨
-            const UPLOAD_PAGE_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+            const UPLOAD_PAGE_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec"; 
             
             window.open(`${UPLOAD_PAGE_URL}?itemCode=${itemCode}`, '_blank');
         });
@@ -416,4 +416,41 @@ function executeSearch() {
     if(term) filtered = filtered.filter(row => rawHeaders.some(h => String(row[h]).toLowerCase().includes(term)));
     
     renderTable(filtered);
+    /**
+ * Transforms standard Google Drive view links into direct embeddable image sources.
+ */
+function getDirectImageUrl(driveLink) {
+    if (!driveLink || typeof driveLink !== 'string' || !driveLink.includes('/d/')) return null;
+    try {
+        const fileId = driveLink.split('/d/')[1].split('/')[0];
+        // Transforms the ID into a public-facing image stream
+        return `https://lh3.googleusercontent.com/d/${fileId}=s800`;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Handles the display of the Modal and Photo preview.
+ * Call this function when a user clicks a row.
+ */
+function openModal(rowData) {
+    const modal = document.getElementById('editModal');
+    const photoContainer = document.getElementById('photoPreviewContainer');
+    const photoImg = document.getElementById('modalPhoto');
+    
+    // Assuming the 'Photo' link is in the last column (Column 8)
+    const photoUrl = rowData[7]; 
+    const directUrl = getDirectImageUrl(photoUrl);
+
+    if (directUrl) {
+        photoImg.src = directUrl;
+        photoContainer.style.display = 'block';
+    } else {
+        photoContainer.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+    // ... rest of your modal population logic goes here
+}
 }
