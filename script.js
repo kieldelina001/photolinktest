@@ -1,11 +1,12 @@
-// Initialize ImageKit
+// 🔑 Initialize ImageKit with your Public Key
 const imagekit = new ImageKit({
-    publicKey: "public_k1qB8gPzcw2eO0d4qfWyAWtyv5M=",
+    publicKey: "public_7P+PlDIEmq6HwED2+NzrdS/VA4s=",
     urlEndpoint: "https://ik.imagekit.io/arqzja2jme"
 });
 
-// ... Keep your existing code, replace transmitUpdateToCloud with this:
+// ... [Keep all your existing variables: GOOGLE_APPS_SCRIPT_URL, inventoryData, etc.] ...
 
+// Update your transmitUpdateToCloud function to use ImageKit
 async function transmitUpdateToCloud(remark, user) {
     const activeRecord = inventoryData.find(r => r._rowId === activeEditIndex);
     const aKey = headerMapping['article/item'] || headerMapping['article'];
@@ -14,31 +15,26 @@ async function transmitUpdateToCloud(remark, user) {
     let finalTimestamp = new Date().toLocaleString('en-US');
     let imageUrl = "";
 
+    // UPLOAD TO IMAGEKIT
     if (modalPhotoInput && modalPhotoInput.files.length > 0) {
         const file = modalPhotoInput.files[0];
-        showLoading("Uploading to Cloud Storage...");
+        showLoading("Uploading photo to ImageKit...");
 
-        // Get Timestamp
-        finalTimestamp = await new Promise((resolve) => {
-            EXIF.getData(file, function() {
-                const exifDateTime = EXIF.getTag(this, "DateTimeOriginal");
-                resolve(exifDateTime ? exifDateTime : finalTimestamp);
-            });
-        });
-
-        // Upload to ImageKit
         try {
             const result = await new Promise((resolve, reject) => {
-                imagekit.upload({ file: file, fileName: `Survey_${itemCode}_${Date.now()}.jpg` }, 
-                (err, res) => err ? reject(err) : resolve(res));
+                imagekit.upload({
+                    file: file,
+                    fileName: `Survey_${itemCode}_${Date.now()}.jpg`
+                }, (err, res) => err ? reject(err) : resolve(res));
             });
             imageUrl = result.url;
         } catch (err) {
-            alert("Upload failed: " + err.message);
+            alert("Image upload failed: " + err.message);
             hideLoading(); return;
         }
     }
 
+    // SEND TO GOOGLE SHEETS
     const bodyParams = new URLSearchParams();
     bodyParams.append("article", itemCode);
     bodyParams.append("remarks", remark);
@@ -46,6 +42,7 @@ async function transmitUpdateToCloud(remark, user) {
     bodyParams.append("timestamp", finalTimestamp);
     if (imageUrl) bodyParams.append("imageURL", imageUrl);
 
+    showLoading("Saving update to Google Sheets...");
     try {
         await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: "POST",
@@ -53,5 +50,7 @@ async function transmitUpdateToCloud(remark, user) {
         });
         hideLoading();
         loadInventoryFromGoogleSheets();
-    } catch(e) { hideLoading(); }
+    } catch(e) { hideLoading(); console.error(e); }
 }
+
+// ... [Keep the rest of your existing functions below] ...
