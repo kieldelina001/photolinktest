@@ -420,14 +420,38 @@ function executeSearch() {
  * Transforms standard Google Drive view links into direct embeddable image sources.
  */
 function getDirectImageUrl(driveLink) {
-    if (!driveLink || typeof driveLink !== 'string' || !driveLink.includes('/d/')) return null;
-    try {
-        const fileId = driveLink.split('/d/')[1].split('/')[0];
-        // Transforms the ID into a public-facing image stream
+    if (!driveLink || typeof driveLink !== 'string') return null;
+
+    // Regex to find the ID in various Google Drive link formats
+    const match = driveLink.match(/[-\w]{25,}/);
+    if (match) {
+        const fileId = match[0];
         return `https://lh3.googleusercontent.com/d/${fileId}=s800`;
-    } catch (e) {
-        return null;
     }
+    return null;
+}
+
+// Update your openModal function
+function openModal(rowData) {
+    const modal = document.getElementById('editModal');
+    const photoContainer = document.getElementById('photoPreviewContainer');
+    const photoImg = document.getElementById('modalPhoto');
+    
+    // ADJUST THIS INDEX: If 'Photo' is the 8th column, it is index 7
+    // If you are unsure, try logging rowData to the console to see the data structure
+    const photoUrl = rowData[7]; 
+    const directUrl = getDirectImageUrl(photoUrl);
+
+    console.log("Attempting to load photo:", photoUrl, "Transformed:", directUrl);
+
+    if (directUrl) {
+        photoImg.src = directUrl;
+        photoContainer.style.display = 'block';
+    } else {
+        photoContainer.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
 }
 
 /**
