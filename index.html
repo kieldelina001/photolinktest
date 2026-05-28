@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload to Drive & Sheet</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 500px; margin: auto; }
+        .container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background-color: #f9f9f9; }
+        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; }
+        button { cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:disabled { background-color: #ccc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Upload Form</h2>
+    <input type="file" id="filePicker" accept="image/*">
+    <input type="text" id="dataInput" placeholder="Enter Description">
+    <button id="uploadBtn" onclick="upload()">Upload & Save</button>
+    <p id="status"></p>
+</div>
+
+<script>
+    // NOTE: This script expects to be running as a Google Apps Script Web App.
+    // Replace the URL below with your actual Google Apps Script Web App URL.
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyUpAuUxolkmjXtT1vWhRie3nNTsaJQ6V3xJy9kkzj_nF2OniYP0WqfpNitM-q2Ehuc/exec"; 
+
+    function upload() {
+        const file = document.getElementById('filePicker').files[0];
+        const status = document.getElementById('status');
+        const btn = document.getElementById('uploadBtn');
+
+        if (!file) {
+            alert("Please select a file.");
+            return;
+        }
+
+        status.innerText = "Uploading... please wait.";
+        btn.disabled = true;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64 = e.target.result.split(',')[1];
+            const payload = {
+                base64: base64,
+                fileName: file.name,
+                mimeType: file.type,
+                sheetData: document.getElementById('dataInput').value
+            };
+
+            // Using fetch to send data to the Google Apps Script Web App
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payload)
+            }).then(() => {
+                status.innerText = "Success! Uploaded to Drive and Sheet updated.";
+                btn.disabled = false;
+            }).catch(err => {
+                status.innerText = "Error: " + err;
+                btn.disabled = false;
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+
+</body>
+</html>
