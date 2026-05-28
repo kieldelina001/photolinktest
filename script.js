@@ -416,4 +416,41 @@ function executeSearch() {
     if(term) filtered = filtered.filter(row => rawHeaders.some(h => String(row[h]).toLowerCase().includes(term)));
     
     renderTable(filtered);
+    /**
+ * Transforms standard Google Drive view links into direct embeddable image sources.
+ */
+function getDirectImageUrl(driveLink) {
+    if (!driveLink || typeof driveLink !== 'string' || !driveLink.includes('/d/')) return null;
+    try {
+        const fileId = driveLink.split('/d/')[1].split('/')[0];
+        // Transforms the ID into a public-facing image stream
+        return `https://lh3.googleusercontent.com/d/${fileId}=s800`;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Handles the display of the Modal and Photo preview.
+ * Call this function when a user clicks a row.
+ */
+function openModal(rowData) {
+    const modal = document.getElementById('editModal');
+    const photoContainer = document.getElementById('photoPreviewContainer');
+    const photoImg = document.getElementById('modalPhoto');
+    
+    // Assuming the 'Photo' link is in the last column (Column 8)
+    const photoUrl = rowData[7]; 
+    const directUrl = getDirectImageUrl(photoUrl);
+
+    if (directUrl) {
+        photoImg.src = directUrl;
+        photoContainer.style.display = 'block';
+    } else {
+        photoContainer.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+    // ... rest of your modal population logic goes here
+}
 }
