@@ -309,7 +309,7 @@ function setupSystemEventHandlers() {
             const itemCode = encodeURIComponent(activeRecord[aKey] || 'unknown');
             
             // 🚨 REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL 🚨
-            const UPLOAD_PAGE_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+            const UPLOAD_PAGE_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec"; 
             
             window.open(`${UPLOAD_PAGE_URL}?itemCode=${itemCode}`, '_blank');
         });
