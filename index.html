@@ -1,72 +1,902 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload to Drive & Sheet</title>
+    <title>Real Estate Inventory Layout (Google Sheets Live Stream)</title>
+    <meta name="author" content="Noel Rie N. Deliña">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 500px; margin: auto; }
-        .container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background-color: #f9f9f9; }
-        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; }
-        button { cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 4px; }
-        button:disabled { background-color: #ccc; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8fafc;
+        }
+
+        .main-container {
+            border: 2px solid #57a1e0; 
+            padding: 20px;
+            width: 85%;
+            margin: auto;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .header-logo {
+            width: 90px; 
+            height: 90px;
+            object-fit: contain;
+        }
+
+        .header-text {
+            text-align: left; 
+        }
+
+        .main-title {
+            font-size: 32px;
+            margin: 0;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            color: #1e293b;
+        }
+
+        .sub-title {
+            font-size: 18px;
+            margin: 5px 0 0 0;
+            color: #475569;
+        }
+
+        .status-banner {
+            background-color: #fff3cd;
+            padding: 12px;
+            border: 1px solid #ffeeba;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: bold;
+            color: #856404;
+            border-radius: 4px;
+        }
+
+        .filter-row {
+            display: flex;
+            justify-content: flex-start; 
+            gap: 30px; 
+            margin-bottom: 25px;
+            padding-left: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start;
+        }
+
+        .input-label {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px; 
+            color: #333;
+        }
+
+        .search-field-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .input-box {
+            font-size: 16px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 250px; 
+        }
+
+        .filter-select {
+            font-size: 16px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 200px; 
+            background-color: white;
+            cursor: pointer;
+            height: 37px; 
+        }
+
+        .search-btn {
+            font-size: 16px;
+            padding: 8px 18px;
+            margin-left: 10px;
+            background-color: #57a1e0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            height: 37px;
+        }
+
+        .dashboard-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-left: 10px;
+            flex-wrap: wrap;
+        }
+
+        .dash-card {
+            background-color: #f8f9fa;
+            border-left: 5px solid #57a1e0;
+            border-top: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 15px 20px;
+            border-radius: 4px;
+            min-width: 140px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .dash-card.card-existing { border-left-color: #28a745; }
+        .dash-card.card-notfound { border-left-color: #dc3545; }
+        .dash-card.card-verification { border-left-color: #ffc107; }
+
+        .dash-title {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .dash-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .export-btn {
+            font-size: 16px;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 10px;
+            align-self: flex-end;
+        }
+
+        .table-section {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .table-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .table-label {
+            font-size: 18px;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .property-table-container {
+            border: 10px solid black; 
+            width: 100%;
+            max-height: 550px;
+            overflow-y: auto;
+            overflow-x: auto; 
+        }
+
+        .property-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .property-table th, .property-table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .property-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .col-description {
+            max-width: 220px; 
+            word-wrap: break-word; 
+            white-space: normal !important;
+        }
+
+        .col-remarks {
+            max-width: 200px; 
+            word-wrap: break-word; 
+            white-space: normal !important;
+        }
+
+        .col-other {
+            white-space: nowrap;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .site-footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 450px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid #57a1e0;
+        }
+
+        .modal-header {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .modal-field {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-field label {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #555;
+        }
+
+        .modal-field input, .modal-field textarea, .modal-field select {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white; 
+        }
+
+        .modal-photo-frame {
+            width: 100%;
+            height: 200px;
+            background-color: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .modal-photo-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .modal-photo-placeholder {
+            color: #94a3b8;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input[type="file"]:not(:disabled) {
+            cursor: pointer;
+            background-color: #e2e8f0;
+        }
+
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-save { background-color: #28a745; color: white; display: none; } 
+        .btn-close { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Upload Form</h2>
-    <input type="file" id="filePicker" accept="image/*">
-    <input type="text" id="dataInput" placeholder="Enter Description">
-    <button id="uploadBtn" onclick="upload()">Upload & Save</button>
-    <p id="status"></p>
-</div>
+    <div class="main-container">
 
-<script>
-    // NOTE: This script expects to be running as a Google Apps Script Web App.
-    // Replace the URL below with your actual Google Apps Script Web App URL.
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyUpAuUxolkmjXtT1vWhRie3nNTsaJQ6V3xJy9kkzj_nF2OniYP0WqfpNitM-q2Ehuc/exec"; 
+        <div class="header-container">
+            <img src="Ph_seal_cebucity.png" alt="Cebu City Seal" class="header-logo" onerror="this.style.display='none'">
+            <div class="header-text">
+                <h1 class="main-title">REAL ESTATE INVENTORY</h1>
+                <p class="sub-title">Property Management Division</p>
+            </div>
+        </div>
 
-    function upload() {
-        const file = document.getElementById('filePicker').files[0];
-        const status = document.getElementById('status');
-        const btn = document.getElementById('uploadBtn');
+        <div id="statusBanner" class="status-banner">System Canvas Ready. Attempting Live Data Link...</div>
 
-        if (!file) {
-            alert("Please select a file.");
-            return;
+        <div class="filter-row">
+            <div class="input-group">
+                <label class="input-label" for="searchInput">Search:</label>
+                <div class="search-field-container">
+                    <input type="text" id="searchInput" class="input-box" placeholder="Type keywords...">
+                    <button id="searchButton" class="search-btn">Search</button>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label" for="remarksFilter">Remarks:</label>
+                <select id="remarksFilter" class="filter-select">
+                    <option value="ALL">-- All Remarks --</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" for="typeFilter">Type:</label>
+                <select id="typeFilter" class="filter-select">
+                    <option value="ALL">-- All Types --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dashboard-row">
+            <div class="dash-card">
+                <div class="dash-title">Total Properties</div>
+                <div id="countTotal" class="dash-value">0</div>
+            </div>
+            <div class="dash-card card-existing">
+                <div class="dash-title">Existing</div>
+                <div id="countExisting" class="dash-value">0</div>
+            </div>
+            <div class="dash-card card-notfound">
+                <div class="dash-title">Not Found</div>
+                <div id="countNotFound" class="dash-value">0</div>
+            </div>
+            <div class="dash-card card-verification">
+                <div class="dash-title">For Verification</div>
+                <div id="countVerification" class="dash-value">0</div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-label-row">
+                <span class="table-label">Table Dataset:</span>
+                <button id="exportButton" class="export-btn">Export Backup CSV</button>
+            </div>
+            <div class="property-table-container">
+                <table class="property-table" id="inventoryTable">
+                    <thead>
+                        <tr id="tableHeaderRow">
+                            <th>Article</th>
+                            <th>Description</th>
+                            <th>Acquisition Date</th>
+                            <th>Unit Value</th>
+                            <th>Remarks</th>
+                            <th>Type</th>
+                            <th>UPDATED BY</th>
+                            <th>LAST UPDATE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="8" class="no-data" id="fallbackTableMsg">Awaiting data stream parsing...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer class="site-footer">
+            <p>&copy; 2026 Webpage Created by <strong>Noel Rie N. Deliña</strong> | Property Management Division</p>
+        </footer>
+
+    </div>
+
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">Property Details</div>
+            
+            <div class="modal-photo-frame" id="modalPhotoFrame">
+                <div class="modal-photo-placeholder">No Image Available</div>
+            </div>
+
+            <div id="modalFormContainer"></div>
+            <div class="modal-actions">
+                <button id="modalEditBtn" class="modal-btn btn-edit">Edit Data</button>
+                <button id="modalSaveBtn" class="modal-btn btn-save">Save Changes</button>
+                <button id="modalCloseBtn" class="modal-btn btn-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🔑 Configuration Layer
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysDub-bsa64wNkwypjL4xXjXeLCTyLceOQUiuYHsrqiZXZHte5_6207FEInLP2i7srlw/exec";
+        const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
+        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/" + SPREADSHEET_ID + "/gviz/tq?tqx=out:csv&gid=0";
+        const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
+
+        const displayHeaders = ["Article", "Description", "Acquisition Date", "Unit Value", "Remarks", "Type", "PHOTOLINK", "UPDATED BY", "LAST UPDATE"];
+        const targetHeadersLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "photolink", "updated by", "last update"];
+        const popupOrderLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "photolink"]; 
+
+        let inventoryData = []; 
+        let rawHeaders = displayHeaders;       
+        let headerMapping = {}; 
+        let activeEditIndex = null; 
+        let parsedUniqueRemarks = []; 
+
+        let stagedFileBytes = "";
+        let stagedFileName = "";
+
+        // ⏳ Loading Screen Setup
+        let loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'dynamicLoadingOverlay';
+        loadingOverlay.innerHTML = `
+            <div style="text-align: center; color: #ffffff !important; font-family: Arial, sans-serif !important;">
+                <div style="width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.2); border-radius: 50%; border-top-color: #ffffff; animation: spin 0.8s linear infinite; margin: 0 auto 15px auto;"></div>
+                <div id="loadingOverlayText" style="font-size: 18px; font-weight: bold; color: #ffffff;">Syncing with cloud server...</div>
+            </div>
+        `;
+        Object.assign(loadingOverlay.style, {
+            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)', display: 'none', justifyContent: 'center',
+            alignItems: 'center', zIndex: '999999'
+        });
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = "@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }";
+        document.head.appendChild(styleSheet);
+        document.body.appendChild(loadingOverlay);
+
+        function showLoading(msg) {
+            document.getElementById('loadingOverlayText').textContent = msg;
+            loadingOverlay.style.display = 'flex';
+        }
+        function hideLoading() { loadingOverlay.style.display = 'none'; }
+
+        // Operator Entry Popup
+        let customNameModal = document.createElement('div');
+        customNameModal.id = 'customNameModal';
+        customNameModal.innerHTML = `
+            <div style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 90%; max-width: 400px; box-sizing: border-box; text-align: center; font-family: Arial, sans-serif;">
+                <label style="font-size: 18px; font-weight: bold; color: #333333; display: block; margin-bottom: 15px;">Enter Your Name to Log This Change:</label>
+                <input type="text" id="custom-operator-input" value="Noel Rie N. Deliña" placeholder="Your Name" style="width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 20px; box-sizing: border-box;" />
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="customCancelNameBtn" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">Cancel</button>
+                    <button id="customConfirmNameBtn" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">Confirm & Publish</button>
+                </div>
+            </div>
+        `;
+        Object.assign(customNameModal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'none', justifyContent: 'center',
+            alignItems: 'center', zIndex: '99999'
+        });
+        document.body.appendChild(customNameModal);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setupSystemEventHandlers();
+            loadInventoryFromGoogleSheets();
+        });
+
+        async function loadInventoryFromGoogleSheets() {
+            updateStatusBanner("#fff3cd", "#856404", "Connecting to Google Sheets Live Datastream...");
+            showLoading("Syncing live spreadsheet database...");
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                if (!response.ok) throw new Error("Cloud streams dropped link request.");
+                const rawCsvText = await response.text(); 
+
+                Papa.parse(rawCsvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        if (results.data && results.data.length > 0) {
+                            rawHeaders = Object.keys(results.data[0]);
+                            headerMapping = {};
+                            targetHeadersLowercase.forEach(target => {
+                                const actualKey = rawHeaders.find(h => h.toLowerCase().trim().includes(target));
+                                headerMapping[target] = actualKey || target; 
+                            });
+                            inventoryData = results.data.map((row, idx) => {
+                                row._rowId = idx;
+                                return row;
+                            });
+                            initializeSystemUI();
+                        } else {
+                            showErrorState("Google spreadsheet grid cells returned blank metric records.");
+                        }
+                        hideLoading();
+                    }
+                });
+            } catch (err) {
+                hideLoading();
+                console.error(err);
+                showErrorState("Offline mode or Cross-Origin Policy Restriction detected.");
+            }
         }
 
-        status.innerText = "Uploading... please wait.";
-        btn.disabled = true;
+        function updateStatusBanner(bg, color, txt) {
+            const b = document.getElementById('statusBanner');
+            if(b) { b.style.backgroundColor = bg; b.style.color = color; b.textContent = txt; }
+        }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64 = e.target.result.split(',')[1];
-            const payload = {
-                base64: base64,
-                fileName: file.name,
-                mimeType: file.type,
-                sheetData: document.getElementById('dataInput').value
+        function showErrorState(msg) {
+            updateStatusBanner("#f8d7da", "#721c24", "Offline View: " + msg);
+            const m = document.getElementById('fallbackTableMsg');
+            if(m) m.textContent = "Data feed stream locked over file:// protocols.";
+        }
+
+        function initializeSystemUI() {
+            updateStatusBanner("#d4edda", "#155724", "✅ Connected to Google Sheets: Live Stream Processing.");
+            populateDropdown('remarks', document.getElementById('remarksFilter'), '-- All Remarks --');
+            populateDropdown('type', document.getElementById('typeFilter'), '-- All Types --');
+            renderHeaders(["Article", "Description", "Acquisition Date", "Unit Value", "Remarks", "Type", "UPDATED BY", "LAST UPDATE"]);
+            calculateStaticDashboardTotals(inventoryData);
+            executeSearch();
+        }
+
+        function populateDropdown(type, selectEl, placeholderText) {
+            if(!selectEl) return;
+            selectEl.innerHTML = `<option value="ALL">${placeholderText}</option>`;
+            const sheetKey = headerMapping[type];
+            if(!sheetKey) return;
+            
+            let elements = new Set();
+            inventoryData.forEach(row => {
+                const val = String(row[sheetKey] || '').trim();
+                if(val) elements.add(val);
+            });
+            
+            const sorted = Array.from(elements).sort();
+            if(type === 'remarks') parsedUniqueRemarks = sorted;
+            
+            sorted.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val; opt.textContent = val;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function renderHeaders(headers) {
+            const thr = document.getElementById('tableHeaderRow');
+            if(!thr) return; thr.innerHTML = '';
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                if (h.toLowerCase().includes('description')) th.className = 'col-description';
+                else if (h.toLowerCase().includes('remarks')) th.className = 'col-remarks';
+                else th.className = 'col-other';
+                thr.appendChild(th);
+            });
+        }
+
+        function renderTable(data) {
+            const tb = document.getElementById('tableBody');
+            if(!tb) return; tb.innerHTML = '';
+            if(data.length === 0) {
+                tb.innerHTML = `<tr><td colspan="8" class="no-data">No records match the active matrix search filters.</td></tr>`;
+                return;
+            }
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-id', row._rowId);
+                ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "updated by", "last update"].forEach(tKey => {
+                    const td = document.createElement('td');
+                    const resolvedKey = headerMapping[tKey];
+                    td.textContent = resolvedKey ? (row[resolvedKey] || '') : '';
+                    if (tKey.includes('description')) td.className = 'col-description';
+                    else if (tKey.includes('remarks')) td.className = 'col-remarks';
+                    else td.className = 'col-other';
+                    tr.appendChild(td);
+                });
+                tr.addEventListener('click', () => openPopUp(row._rowId));
+                tb.appendChild(tr);
+            });
+        }
+
+        function calculateStaticDashboardTotals(items) {
+            const totalEl = document.getElementById('countTotal');
+            if(!totalEl) return;
+            totalEl.textContent = items.length;
+            
+            const rKey = headerMapping['remarks'];
+            const tKey = headerMapping['type'];
+            let activeCount = 0, missingCount = 0, pendingCount = 0;
+            
+            items.forEach(row => {
+                const remVal = rKey ? String(row[rKey]).toLowerCase() : '';
+                const typeVal = tKey ? String(row[tKey]).toLowerCase() : '';
+                if(remVal.includes('existing') || typeVal.includes('existing')) activeCount++;
+                if(remVal.includes('not found')) missingCount++;
+                if(remVal.includes('for verification') || remVal.includes('verification')) pendingCount++;
+            });
+            
+            document.getElementById('countExisting').textContent = activeCount;
+            document.getElementById('countNotFound').textContent = missingCount;
+            document.getElementById('countVerification').textContent = pendingCount;
+        }
+
+        function openPopUp(rowId) {
+            activeEditIndex = rowId;
+            stagedFileBytes = "";
+            stagedFileName = "";
+
+            const itemData = inventoryData.find(r => r._rowId === rowId);
+            const container = document.getElementById('modalFormContainer');
+            if(!container) return; container.innerHTML = '';
+            
+            const photoFrame = document.getElementById('modalPhotoFrame');
+            const imgKey = headerMapping['photolink'];
+            const imageUrlStr = imgKey ? String(itemData[imgKey] || '').trim() : '';
+
+            if(imageUrlStr && imageUrlStr.startsWith('http')) {
+                photoFrame.innerHTML = `<img src="${imageUrlStr}" alt="Item Image Preview" onerror="this.parentElement.innerHTML='<div class=modal-photo-placeholder>Failed to Load Image</div>'">`;
+            } else {
+                photoFrame.innerHTML = `<div class="modal-photo-placeholder">No Image Available</div>`;
+            }
+
+            popupOrderLowercase.forEach(tKey => {
+                const realKey = headerMapping[tKey];
+                const currentVal = realKey ? (itemData[realKey] || '') : '';
+                const idx = targetHeadersLowercase.indexOf(tKey);
+                const labelText = displayHeaders[idx];
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-field';
+                let fieldEl;
+                
+                if(tKey === 'photolink') {
+                    fieldEl = document.createElement('input');
+                    fieldEl.type = 'file';
+                    fieldEl.accept = "image/*";
+                    
+                    fieldEl.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        stagedFileName = file.name;
+                        
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const img = new Image();
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width;
+                                let height = img.height;
+                                const max_size = 1000; 
+
+                                if (width > height) {
+                                    if (width > max_size) { height *= max_size / width; width = max_size; }
+                                } else {
+                                    if (height > max_size) { width *= max_size / height; height = max_size; }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+                                
+                                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+                                stagedFileBytes = compressedDataUrl.split(',')[1];
+                                photoFrame.innerHTML = `<img src="${compressedDataUrl}" alt="Compressed Upload Preview">`;
+                            };
+                            img.src = evt.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    });
+
+                } else if(tKey === 'remarks') {
+                    fieldEl = document.createElement('select');
+                    parsedUniqueRemarks.forEach(rem => {
+                        const opt = document.createElement('option');
+                        opt.value = rem; opt.textContent = rem;
+                        if(rem === currentVal) opt.selected = true;
+                        fieldEl.appendChild(opt);
+                    });
+                    if(!currentVal) {
+                        const fallbackOpt = document.createElement('option');
+                        fallbackOpt.value = ''; fallbackOpt.textContent = '-- Choose Remark --'; fallbackOpt.selected = true;
+                        fieldEl.insertBefore(fallbackOpt, fieldEl.firstChild);
+                    }
+                } else if(tKey === 'description') {
+                    fieldEl = document.createElement('textarea');
+                    fieldEl.rows = 3; fieldEl.value = currentVal;
+                } else {
+                    fieldEl = document.createElement('input');
+                    fieldEl.type = 'text'; fieldEl.value = currentVal;
+                }
+                
+                fieldEl.id = 'modal-input-' + tKey.replace(/[^a-zA-Z0-9]/g, '-');
+                fieldEl.disabled = true;
+                
+                const label = document.createElement('label');
+                label.textContent = labelText;
+                wrapper.appendChild(label); wrapper.appendChild(fieldEl);
+                container.appendChild(wrapper);
+            });
+            
+            document.getElementById('modalEditBtn').style.display = 'inline-block';
+            document.getElementById('modalSaveBtn').style.display = 'none';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function setupSystemEventHandlers() {
+            const edBtn = document.getElementById('modalEditBtn');
+            if(edBtn) {
+                edBtn.addEventListener('click', () => {
+                    const remInput = document.getElementById('modal-input-remarks');
+                    if(remInput) remInput.disabled = false;
+                    
+                    const photoInput = document.getElementById('modal-input-photolink');
+                    if(photoInput) photoInput.disabled = false;
+
+                    edBtn.style.display = 'none';
+                    document.getElementById('modalSaveBtn').style.display = 'inline-block';
+                });
+            }
+
+            const svBtn = document.getElementById('modalSaveBtn');
+            if(svBtn) {
+                svBtn.addEventListener('click', () => {
+                    document.getElementById('editModal').style.display = 'none';
+                    customNameModal.style.display = 'flex';
+                });
+            }
+
+            // 📤 Handshake Execution Flow Configuration
+            document.getElementById('customConfirmNameBtn').onclick = async () => {
+                let name = document.getElementById('custom-operator-input').value;
+                if(!name || name.trim() === "") {
+                    alert("An Operator Name signature is required to commit entries.");
+                    return;
+                }
+                
+                customNameModal.style.display = 'none';
+                showLoading("Uploading data packages to secure cloud database...");
+
+                const itemData = inventoryData.find(r => r._rowId === activeEditIndex);
+                const articleKey = headerMapping['article/item'];
+                const articleValue = itemData[articleKey];
+                const remarksSelection = document.getElementById('modal-input-remarks').value;
+
+                // Build structural payload JSON string object matching your operational script layout
+                const payload = {
+                    article: articleValue,
+                    remarks: remarksSelection,
+                    updatedby: name.trim(),
+                    timestamp: new Date().toLocaleString(),
+                    fileBytes: stagedFileBytes, // Stays empty string "" if no new photo selected
+                    fileName: stagedFileName
+                };
+
+                try {
+                    const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // Standard operational parameter bypass mode for Apps Script links
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    // Force an active grid loop refresh back to standard user dashboard state
+                    alert("Update broadcast sent successfully! Refreshing dynamic matrix view...");
+                    location.reload();
+                } catch (error) {
+                    hideLoading();
+                    console.error("Transmission Error:", error);
+                    alert("Datastream routing failure. Verify deployment linkages.");
+                }
             };
 
-            // Using fetch to send data to the Google Apps Script Web App
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(payload)
-            }).then(() => {
-                status.innerText = "Success! Uploaded to Drive and Sheet updated.";
-                btn.disabled = false;
-            }).catch(err => {
-                status.innerText = "Error: " + err;
-                btn.disabled = false;
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-</script>
+            document.getElementById('customCancelNameBtn').onclick = () => {
+                customNameModal.style.display = 'none';
+                document.getElementById('editModal').style.display = 'flex';
+            };
 
+            document.getElementById('modalCloseBtn').onclick = () => {
+                document.getElementById('editModal').style.display = 'none';
+            };
+
+            document.getElementById('searchButton').onclick = executeSearch;
+            document.getElementById('searchInput').onkeyup = (e) => { if(e.key === 'Enter') executeSearch(); };
+            document.getElementById('remarksFilter').onchange = executeSearch;
+            document.getElementById('typeFilter').onchange = executeSearch;
+
+            document.getElementById('exportButton').onclick = () => {
+                if(inventoryData.length === 0) return;
+                const csvContent = Papa.unparse(inventoryData.map(r => {
+                    let cleaned = {...r}; delete cleaned._rowId; return cleaned;
+                }));
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute("download", BACKUP_FILE_NAME);
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            };
+        }
+
+        function executeSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const remarkFilter = document.getElementById('remarksFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            const rKey = headerMapping['remarks'];
+            const tKey = headerMapping['type'];
+
+            const filtered = inventoryData.filter(row => {
+                const remVal = rKey ? String(row[rKey] || '') : '';
+                const typeVal = tKey ? String(row[tKey] || '') : '';
+
+                if(remarkFilter !== 'ALL' && remVal !== remarkFilter) return false;
+                if(typeFilter !== 'ALL' && typeVal !== typeFilter) return false;
+
+                if(query === '') return true;
+                return Object.values(row).some(val => String(val).toLowerCase().includes(query));
+            });
+
+            renderTable(filtered);
+        }
+    </script>
 </body>
 </html>
