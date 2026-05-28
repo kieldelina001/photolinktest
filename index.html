@@ -1,4 +1,15 @@
 <!DOCTYPE html>
+
+<script src="https://unpkg.com/imagekit-javascript/dist/imagekit.min.js"></script>
+
+const imagekit = new ImageKit({
+    publicKey: "public_7P+PlDIEmq6HwED2+NzrdS/VA4s=",
+    urlEndpoint: "https://ik.imagekit.io/arqzja2jme",
+    authenticationEndpoint: "YOUR_GOOGLE_APPS_SCRIPT_URL_THAT_RETURNS_AUTH_PARAMS" 
+    // NOTE: You must create a function in your Apps Script that returns 
+    // the token, expire, and signature to ensure secure uploads.
+});
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -806,12 +817,50 @@
             }
 
             // 📤 Handshake Execution Flow Configuration
-            document.getElementById('customConfirmNameBtn').onclick = async () => {
-                let name = document.getElementById('custom-operator-input').value;
-                if(!name || name.trim() === "") {
-                    alert("An Operator Name signature is required to commit entries.");
-                    return;
-                }
+           document.getElementById('customConfirmNameBtn').onclick = async () => {
+    let name = document.getElementById('custom-operator-input').value;
+    const fileInput = document.getElementById('modal-input-photolink');
+    const file = fileInput.files[0];
+
+    showLoading("Uploading to Cloud...");
+
+    let uploadedImageUrl = "";
+
+    // 1. Upload to ImageKit if a file is selected
+    if (file) {
+        try {
+            const uploadResult = await imagekit.upload({
+                file: file,
+                fileName: "Property_" + Date.now() + ".jpg",
+                tags: ["inventory"]
+            });
+            uploadedImageUrl = uploadResult.url;
+        } catch (err) {
+            console.error("Upload Error:", err);
+            hideLoading();
+            alert("Image upload failed.");
+            return;
+        }
+    }
+
+    // 2. Prepare Payload (include the URL returned by ImageKit)
+    const payload = {
+        article: articleValue,
+        remarks: remarksSelection,
+        updatedby: name.trim(),
+        timestamp: new Date().toLocaleString(),
+        imageURL: uploadedImageUrl // Send this to your Apps Script
+    };
+
+    // 3. Send to Google Apps Script
+    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    location.reload();
+};
                 
                 customNameModal.style.display = 'none';
                 showLoading("Uploading data packages to secure cloud database...");
