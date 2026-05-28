@@ -1,21 +1,4 @@
 <!DOCTYPE html>
-<script>
-    const imagekit = new ImageKit({
-        publicKey: "public_7P+PlDIEmq6HwED2+NzrdS/VA4s=",
-        urlEndpoint: "https://ik.imagekit.io/arqzja2jme",
-        authenticationEndpoint: "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE" 
-    });
-</script>
-
-<script src="https://unpkg.com/imagekit-javascript/dist/imagekit.min.js"></script>
-
-const imagekit = new ImageKit({
-    publicKey: "public_7P+PlDIEmq6HwED2+NzrdS/VA4s=",
-    urlEndpoint: "https://ik.imagekit.io/arqzja2jme",
-    // Use the URL of your deployed Google Apps Script
-    authenticationEndpoint: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?action=getAuthParams"
-});
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -490,7 +473,7 @@ const imagekit = new ImageKit({
 
     <script>
         // 🔑 Configuration Layer
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXLbYojNmMJjgLOh9s-kK6-Njf9g68nw6lCwmSYYUxwHmvGq0hsMK-o5cZDbQl5oZm/exec";
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysDub-bsa64wNkwypjL4xXjXeLCTyLceOQUiuYHsrqiZXZHte5_6207FEInLP2i7srlw/exec";
         const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
         const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/" + SPREADSHEET_ID + "/gviz/tq?tqx=out:csv&gid=0";
         const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
@@ -823,49 +806,33 @@ const imagekit = new ImageKit({
             }
 
             // 📤 Handshake Execution Flow Configuration
-           document.getElementById('customConfirmNameBtn').onclick = async () => {
+           // Inside your existing setupSystemEventHandlers function in index.html
+document.getElementById('customConfirmNameBtn').onclick = () => {
     let name = document.getElementById('custom-operator-input').value;
-    const fileInput = document.getElementById('modal-input-photolink');
-    const file = fileInput.files[0];
-
-    showLoading("Uploading to Cloud...");
-
-    let uploadedImageUrl = "";
-
-    // 1. Upload to ImageKit if a file is selected
-    if (file) {
-        try {
-            const uploadResult = await imagekit.upload({
-                file: file,
-                fileName: "Property_" + Date.now() + ".jpg",
-                tags: ["inventory"]
-            });
-            uploadedImageUrl = uploadResult.url;
-        } catch (err) {
-            console.error("Upload Error:", err);
-            hideLoading();
-            alert("Image upload failed.");
-            return;
-        }
+    if(!name || name.trim() === "") {
+        alert("An Operator Name signature is required.");
+        return;
     }
-
-    // 2. Prepare Payload (include the URL returned by ImageKit)
-    const payload = {
-        article: articleValue,
-        remarks: remarksSelection,
-        updatedby: name.trim(),
-        timestamp: new Date().toLocaleString(),
-        imageURL: uploadedImageUrl // Send this to your Apps Script
-    };
-
-    // 3. Send to Google Apps Script
-    await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    location.reload();
+    
+    // Get the current row data
+    const itemData = inventoryData.find(r => r._rowId === activeEditIndex);
+    const articleKey = headerMapping['article/item'] || headerMapping['article'];
+    const articleValue = encodeURIComponent(itemData[articleKey]);
+    const operator = encodeURIComponent(name.trim());
+    
+    // Redirect the user to the Google Apps Script Web App
+    // The link opens in a new tab so they don't lose their place on your site
+    window.open(`${GOOGLE_APPS_SCRIPT_URL}?article=${articleValue}&user=${operator}`, '_blank');
+    
+    // Close the entry modals on your site
+    customNameModal.style.display = 'none';
+    editModal.style.display = 'none';
+    
+    // Clear the file input staging so it doesn't try to reuse data
+    stagedFileBytes = "";
+    stagedFileName = "";
+    
+    alert("Redirecting to secure Google upload portal...");
 };
                 
                 customNameModal.style.display = 'none';
@@ -878,43 +845,13 @@ const imagekit = new ImageKit({
 
                 // Build structural payload JSON string object matching your operational script layout
                 const payload = {
-
-    article: articleValue,
-
-    remarks: remarksSelection,
-
-    updatedby: name.trim(),
-
-    timestamp:
-        new Date().toLocaleString(),
-
-    fileBytes:
-        stagedFileBytes || "",
-
-    fileName:
-        stagedFileName ||
-        ("IMG_" + Date.now() + ".jpg")
-};
-
-const response = await fetch(
-    GOOGLE_APPS_SCRIPT_URL,
-    {
-        method: 'POST',
-
-        headers: {
-            'Content-Type':
-                'application/json'
-        },
-
-        body:
-            JSON.stringify(payload)
-    }
-);
-
-const result =
-    await response.json();
-
-console.log(result);
+                    article: articleValue,
+                    remarks: remarksSelection,
+                    updatedby: name.trim(),
+                    timestamp: new Date().toLocaleString(),
+                    fileBytes: stagedFileBytes, // Stays empty string "" if no new photo selected
+                    fileName: stagedFileName
+                };
 
                 try {
                     const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
