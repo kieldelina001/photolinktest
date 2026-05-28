@@ -1,5 +1,5 @@
 // 🔑 Google Sheets Cloud Gateway Architecture
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxg14CWxLWRYy8q8AEN50aMeUWPJN4nrURSXL0I4I6lyFubPjyH_eyQy5KJtxN6iY02eg/exec";
 const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
 const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
 const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
@@ -309,7 +309,7 @@ function setupSystemEventHandlers() {
             const itemCode = encodeURIComponent(activeRecord[aKey] || 'unknown');
             
             // 🚨 REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL 🚨
-            const UPLOAD_PAGE_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec"; 
+            const UPLOAD_PAGE_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
             
             window.open(`${UPLOAD_PAGE_URL}?itemCode=${itemCode}`, '_blank');
         });
@@ -416,65 +416,4 @@ function executeSearch() {
     if(term) filtered = filtered.filter(row => rawHeaders.some(h => String(row[h]).toLowerCase().includes(term)));
     
     renderTable(filtered);
-    /**
- * Transforms standard Google Drive view links into direct embeddable image sources.
- */
-function getDirectImageUrl(driveLink) {
-    if (!driveLink || typeof driveLink !== 'string') return null;
-
-    // Regex to find the ID in various Google Drive link formats
-    const match = driveLink.match(/[-\w]{25,}/);
-    if (match) {
-        const fileId = match[0];
-        return `https://lh3.googleusercontent.com/d/${fileId}=s800`;
-    }
-    return null;
-}
-
-// Update your openModal function
-function openModal(rowData) {
-    const modal = document.getElementById('editModal');
-    const photoContainer = document.getElementById('photoPreviewContainer');
-    const photoImg = document.getElementById('modalPhoto');
-    
-    // ADJUST THIS INDEX: If 'Photo' is the 8th column, it is index 7
-    // If you are unsure, try logging rowData to the console to see the data structure
-    const photoUrl = rowData[7]; 
-    const directUrl = getDirectImageUrl(photoUrl);
-
-    console.log("Attempting to load photo:", photoUrl, "Transformed:", directUrl);
-
-    if (directUrl) {
-        photoImg.src = directUrl;
-        photoContainer.style.display = 'block';
-    } else {
-        photoContainer.style.display = 'none';
-    }
-
-    modal.style.display = 'flex';
-}
-
-/**
- * Handles the display of the Modal and Photo preview.
- * Call this function when a user clicks a row.
- */
-function openModal(rowData) {
-    const modal = document.getElementById('editModal');
-    const photoContainer = document.getElementById('photoPreviewContainer');
-    const photoImg = document.getElementById('modalPhoto');
-    
-    // Assuming the 'Photo' link is in the last column (Column 8)
-    const photoUrl = rowData[7]; 
-    const directUrl = getDirectImageUrl(photoUrl);
-
-    if (directUrl) {
-        photoImg.src = directUrl;
-        photoContainer.style.display = 'block';
-    } else {
-        photoContainer.style.display = 'none';
-    }
-
-    modal.style.display = 'flex';
-    // ... rest of your modal population logic goes here
-}
 }
