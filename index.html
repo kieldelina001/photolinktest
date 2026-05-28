@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 
+
 <script src="https://unpkg.com/imagekit-javascript/dist/imagekit.min.js"></script>
 
 const imagekit = new ImageKit({
     publicKey: "public_7P+PlDIEmq6HwED2+NzrdS/VA4s=",
     urlEndpoint: "https://ik.imagekit.io/arqzja2jme",
-    authenticationEndpoint: "YOUR_GOOGLE_APPS_SCRIPT_URL_THAT_RETURNS_AUTH_PARAMS" 
-    // NOTE: You must create a function in your Apps Script that returns 
-    // the token, expire, and signature to ensure secure uploads.
+    // Use the URL of your deployed Google Apps Script
+    authenticationEndpoint: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?action=getAuthParams"
 });
 
 <html lang="en">
