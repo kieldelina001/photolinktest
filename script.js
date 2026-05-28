@@ -1,12 +1,12 @@
 // 🔑 Google Sheets Cloud Gateway Architecture
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysDub-bsa64wNkwypjL4xXjXeLCTyLceOQUiuYHsrqiZXZHte5_6207FEInLP2i7srlw/exec";
-const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8"; // Fix: Assigned string key instead of folder URL
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxg14CWxLWRYy8q8AEN50aMeUWPJN4nrURSXL0I4I6lyFubPjyH_eyQy5KJtxN6iY02eg/exec";
+const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
 const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
 const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
 
-const displayHeaders = ["Article", "Description", "Acquisition Date", "Unit Value", "Remarks", "Type", "Photo Link", "UPDATED BY", "LAST UPDATE"];
-const targetHeadersLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "photo link", "updated by", "last update"];
-const popupOrderLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "photo link"]; 
+const displayHeaders = ["Article", "Description", "Acquisition Date", "Unit Value", "Remarks", "Type", "UPDATED BY", "LAST UPDATE"];
+const targetHeadersLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type", "updated by", "last update"];
+const popupOrderLowercase = ["article/item", "description", "acquisition date", "unit value", "remarks", "type"]; 
 
 let inventoryData = []; 
 let rawHeaders = [];       
@@ -14,64 +14,80 @@ let headerMapping = {};
 let activeEditIndex = null; 
 let parsedUniqueRemarks = []; 
 
-// 📸 Staging variables tracking image file picker byte data streams
-let stagedFileBytes = "";
-let stagedFileName = "";
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const exportButton = document.getElementById('exportButton');
+const remarksFilter = document.getElementById('remarksFilter');
+const typeFilter = document.getElementById('typeFilter');
+const tableHeaderRow = document.getElementById('tableHeaderRow');
+const tableBody = document.getElementById('tableBody');
+const statusBanner = document.getElementById('statusBanner');
 
-let searchInput, searchButton, exportButton, remarksFilter, typeFilter, tableHeaderRow, tableBody, statusBanner;
-let countTotal, countExisting, countNotFound, countVerification;
-let editModal, modalFormContainer, modalEditBtn, modalSaveBtn, modalCloseBtn, loadingOverlay, customNameModal;
+const countTotal = document.getElementById('countTotal');
+const countExisting = document.getElementById('countExisting');
+const countNotFound = document.getElementById('countNotFound');
+const countVerification = document.getElementById('countVerification');
 
-window.addEventListener('DOMContentLoaded', () => {
-    bindDOMElements();
-    generateDynamicModals();
-    setupSystemEventHandlers();
-    loadInventoryFromGoogleSheets();
-});
+const editModal = document.getElementById('editModal');
+const modalFormContainer = document.getElementById('modalFormContainer');
+const modalEditBtn = document.getElementById('modalEditBtn');
+const modalSaveBtn = document.getElementById('modalSaveBtn');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+const uploadPhotoBtn = document.getElementById('uploadPhotoBtn'); // ADDED
 
-function bindDOMElements() {
-    searchInput = document.getElementById('searchInput');
-    searchButton = document.getElementById('searchButton');
-    exportButton = document.getElementById('exportButton');
-    remarksFilter = document.getElementById('remarksFilter');
-    typeFilter = document.getElementById('typeFilter');
-    tableHeaderRow = document.getElementById('tableHeaderRow');
-    tableBody = document.getElementById('tableBody');
-    statusBanner = document.getElementById('statusBanner');
-    countTotal = document.getElementById('countTotal');
-    countExisting = document.getElementById('countExisting');
-    countNotFound = document.getElementById('countNotFound');
-    countVerification = document.getElementById('countVerification');
-    editModal = document.getElementById('editModal');
-    modalFormContainer = document.getElementById('modalFormContainer');
-    modalEditBtn = document.getElementById('modalEditBtn');
-    modalSaveBtn = document.getElementById('modalSaveBtn');
-    modalCloseBtn = document.getElementById('modalCloseBtn');
-}
-
-function generateDynamicModals() {
+// ⏳ FOOLPROOF LOADING OVERLAY GENERATOR
+let loadingOverlay = document.getElementById('dynamicLoadingOverlay');
+if (!loadingOverlay) {
     loadingOverlay = document.createElement('div');
     loadingOverlay.id = 'dynamicLoadingOverlay';
     loadingOverlay.innerHTML = `
-        <div style="text-align: center; color: #ffffff !important; font-family: Arial, sans-serif !important;">
-            <div style="width: 60px !important; height: 60px !important; border: 6px solid rgba(255,255,255,0.2) !important; border-radius: 50% !important; border-top-color: #ffffff !important; animation: spin 0.8s linear infinite !important; margin: 0 auto 20px auto !important;"></div>
-            <div id="loadingOverlayText" style="font-size: 20px !important; font-weight: bold !important; color: #ffffff !important;">Connecting...</div>
+        <div style="text-align: center; color: #ffffff !important; font-family: Arial, sans-serif !important; z-index: 100000 !important;">
+            <div style="
+                width: 60px !important; 
+                height: 60px !important; 
+                border: 6px solid rgba(255,255,255,0.2) !important; 
+                border-radius: 50% !important; 
+                border-top-color: #ffffff !important; 
+                animation: spin 0.8s linear infinite !important;
+                margin: 0 auto 20px auto !important;
+            "></div>
+            <div id="loadingOverlayText" style="font-size: 20px !important; font-weight: bold !important; color: #ffffff !important; text-shadow: 1px 1px 5px rgba(0,0,0,0.5) !important;">Connecting...</div>
         </div>
     `;
     Object.assign(loadingOverlay.style, {
         position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
         backgroundColor: 'rgba(0, 0, 0, 0.85)', display: 'none', justifyContent: 'center',
-        alignItems: 'center', zIndex: '999999'
+        alignItems: 'center', zIndex: '999999', transition: 'opacity 0.2s ease'
     });
     const styleSheet = document.createElement("style");
     styleSheet.innerText = "@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }";
     document.head.appendChild(styleSheet);
     document.body.appendChild(loadingOverlay);
+}
 
+function showLoading(msg) {
+    const textEl = document.getElementById('loadingOverlayText');
+    if (textEl) textEl.textContent = msg;
+    loadingOverlay.style.setProperty('display', 'flex', 'important');
+}
+
+function hideLoading() {
+    loadingOverlay.style.setProperty('display', 'none', 'important');
+}
+
+// 🎯 DYNAMIC DEAD-CENTER CUSTOM NAME POPUP
+let customNameModal = document.getElementById('customNameModal');
+if (!customNameModal) {
     customNameModal = document.createElement('div');
     customNameModal.id = 'customNameModal';
     customNameModal.innerHTML = `
-        <div style="background: #ffffff !important; padding: 30px !important; border-radius: 8px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important; width: 90% !important; max-width: 400px !important; box-sizing: border-box !important; text-align: center !important; font-family: Arial, sans-serif !important;">
+        <div style="
+            background: #ffffff !important;
+            padding: 30px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+            width: 90% !important;max-width: 400px !important;box-sizing: border-box !important;text-align: center !important;font-family: Arial, sans-serif !important;
+        ">
             <label style="font-size: 18px !important; font-weight: bold !important; color: #333333 !important; display: block !important; margin-bottom: 15px !important;">Enter Your Name to Log This Change:</label>
             <input type="text" id="custom-operator-input" value="Noel Rie N. Deliña" placeholder="Your Name" style="width: 100% !important; padding: 12px !important; font-size: 16px !important; border: 1px solid #ccc !important; border-radius: 4px !important; margin-bottom: 20px !important; box-sizing: border-box !important;" />
             <div style="display: flex !important; gap: 10px !important; justify-content: center !important;">
@@ -88,23 +104,16 @@ function generateDynamicModals() {
     document.body.appendChild(customNameModal);
 }
 
-function showLoading(msg) {
-    const textEl = document.getElementById('loadingOverlayText');
-    if (textEl) textEl.textContent = msg;
-    loadingOverlay.style.setProperty('display', 'flex', 'important');
-}
-
-function hideLoading() {
-    loadingOverlay.style.setProperty('display', 'none', 'important');
-}
+window.addEventListener('DOMContentLoaded', () => {
+    setupSystemEventHandlers();
+    loadInventoryFromGoogleSheets();
+});
 
 async function loadInventoryFromGoogleSheets() {
-    if(statusBanner) {
-        statusBanner.style.backgroundColor = "#fff3cd";
-        statusBanner.style.color = "#856404";
-        statusBanner.textContent = "Connecting to Google Sheets Live Datastream...";
-    }
-    showLoading("Syncing live spreadsheet database...");
+    statusBanner.style.backgroundColor = "#fff3cd";
+    statusBanner.style.color = "#856404";
+    statusBanner.textContent = "Connecting to Google Sheets Live Datastream...";
+    showLoading("Syncing live spreadsheet grid...");
 
     try {
         const response = await fetch(GOOGLE_SHEET_CSV_URL);
@@ -128,34 +137,35 @@ async function loadInventoryFromGoogleSheets() {
                     });
                     initializeSystemUI();
                 } else {
-                    showErrorState("Target dataset sheet contains empty cell records.");
+                    throw new Error("Target dataset sheet contains no metrics.");
                 }
                 hideLoading();
             }
         });
     } catch (err) {
         hideLoading();
-        showErrorState("Offline mode or Cross-Origin Policy Restriction detected.");
+        statusBanner.style.backgroundColor = "#f8d7da";
+        statusBanner.style.color = "#721c24";
+        statusBanner.textContent = "Connection Error: Check Sheet spreadsheet access permission configuration.";
         console.error(err);
     }
 }
 
-function showErrorState(msg) {
-    if(statusBanner) {
-        statusBanner.style.backgroundColor = "#f8d7da";
-        statusBanner.style.color = "#721c24";
-        statusBanner.textContent = "Offline View: " + msg;
-    }
-}
-
 function initializeSystemUI() {
-    if(statusBanner) {
-        statusBanner.style.backgroundColor = "#d4edda";
-        statusBanner.style.color = "#155724";
-        statusBanner.textContent = "✅ Connected to Google Sheets: Live View Active.";
-    }
+    statusBanner.style.backgroundColor = "#d4edda";
+    statusBanner.style.color = "#155724";
+    statusBanner.textContent = "✅ Connected to Google Sheets: Live View Active.";
+
+    if (searchInput) searchInput.disabled = false;
+    if (searchButton) searchButton.disabled = false;
+    if (exportButton) exportButton.disabled = false;
+    if (remarksFilter) remarksFilter.disabled = false;
+    if (typeFilter) typeFilter.disabled = false;
+    if (searchInput) searchInput.placeholder = "Type keywords...";
+
     populateDropdown('remarks', remarksFilter, '-- All Remarks --');
     populateDropdown('type', typeFilter, '-- All Types --');
+    renderHeaders(displayHeaders);
     calculateStaticDashboardTotals(inventoryData);
     executeSearch();
 }
@@ -182,49 +192,22 @@ function populateDropdown(type, selectEl, placeholderText) {
     });
 }
 
-function calculateStaticDashboardTotals(items) {
-    if(!countTotal) return;
-    countTotal.textContent = items.length;
-    
-    const rKey = headerMapping['remarks'];
-    const tKey = headerMapping['type'];
-    let activeCount = 0, missingCount = 0, pendingCount = 0;
-    
-    items.forEach(row => {
-        const remVal = rKey ? String(row[rKey]).toLowerCase().trim() : '';
-        const typeVal = tKey ? String(row[tKey]).toLowerCase().trim() : '';
-        if(remVal === 'existing' || typeVal === 'existing') activeCount++;
-        if(remVal === 'not found') missingCount++;
-        if(remVal === 'for verification' || remVal === 'verification') pendingCount++;
+function renderHeaders(headers) {
+    if(!tableHeaderRow) return; tableHeaderRow.innerHTML = '';
+    headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        if (h.toLowerCase().includes('description')) th.className = 'col-description';
+        else if (h.toLowerCase().includes('remarks')) th.className = 'col-remarks';
+        else th.className = 'col-other';
+        tableHeaderRow.appendChild(th);
     });
-    
-    if(countExisting) countExisting.textContent = activeCount;
-    if(countNotFound) countNotFound.textContent = missingCount;
-    if(countVerification) countVerification.textContent = pendingCount;
-}
-
-function executeSearch() {
-    if(!searchInput || !remarksFilter || !typeFilter) return;
-
-    const term = searchInput.value.toLowerCase().trim();
-    const remarkSel = remarksFilter.value;
-    const typeSel = typeFilter.value;
-    const rKey = headerMapping['remarks'];
-    const tKey = headerMapping['type'];
-    
-    let filtered = inventoryData;
-    if(remarkSel !== "ALL" && rKey) filtered = filtered.filter(row => (row[rKey] || '').trim() === remarkSel);
-    if(typeSel !== "ALL" && tKey) filtered = filtered.filter(row => (row[tKey] || '').trim() === typeSel);
-    if(term) filtered = filtered.filter(row => rawHeaders.some(h => String(row[h]).toLowerCase().includes(term)));
-    
-    renderTable(filtered);
 }
 
 function renderTable(data) {
-    if(!tableBody) return;
-    tableBody.innerHTML = '';
+    if(!tableBody) return; tableBody.innerHTML = '';
     if(data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="9" class="no-data">No records match filters.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length}" class="no-data">No records match the active matrix search filters.</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -244,25 +227,32 @@ function renderTable(data) {
     });
 }
 
+function calculateStaticDashboardTotals(items) {
+    if(!countTotal) return;
+    countTotal.textContent = items.length;
+    
+    const rKey = headerMapping['remarks'];
+    const tKey = headerMapping['type'];
+    let activeCount = 0, missingCount = 0, pendingCount = 0;
+    
+    items.forEach(row => {
+        const remVal = rKey ? String(row[rKey]).toLowerCase() : '';
+        const typeVal = tKey ? String(row[tKey]).toLowerCase() : '';
+        if(remVal.includes('existing') || typeVal.includes('existing')) activeCount++;
+        if(remVal.includes('not found')) missingCount++;
+        if(remVal.includes('for verification') || remVal.includes('verification')) pendingCount++;
+    });
+    
+    if(countExisting) countExisting.textContent = activeCount;
+    if(countNotFound) countNotFound.textContent = missingCount;
+    if(countVerification) countVerification.textContent = pendingCount;
+}
+
 function openPopUp(rowId) {
     activeEditIndex = rowId;
-    stagedFileBytes = "";
-    stagedFileName = "";
-
     const itemData = inventoryData.find(r => r._rowId === rowId);
-    if(!modalFormContainer) return;
-    modalFormContainer.innerHTML = '';
+    if(!modalFormContainer) return; modalFormContainer.innerHTML = '';
     
-    const photoFrame = document.getElementById('modalPhotoFrame');
-    const imgKey = headerMapping['photo link'];
-    const imageUrlStr = imgKey ? String(itemData[imgKey] || '').trim() : '';
-
-    if(imageUrlStr && imageUrlStr.startsWith('http')) {
-        photoFrame.innerHTML = `<img src="${imageUrlStr}" alt="Preview" onerror="this.parentElement.innerHTML='<div class=modal-photo-placeholder>Failed to Load Image</div>'">`;
-    } else {
-        photoFrame.innerHTML = `<div class="modal-photo-placeholder">No Image Available</div>`;
-    }
-
     popupOrderLowercase.forEach(tKey => {
         const realKey = headerMapping[tKey];
         const currentVal = realKey ? (itemData[realKey] || '') : '';
@@ -273,26 +263,7 @@ function openPopUp(rowId) {
         wrapper.className = 'modal-field';
         let fieldEl;
         
-        // 📸 Dynamic Input generation to match index.html logic layout channels
-        if(tKey === 'photo link') {
-            fieldEl = document.createElement('input');
-            fieldEl.type = 'file';
-            fieldEl.accept = "image/*";
-            fieldEl.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                stagedFileName = file.name;
-                
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    stagedFileBytes = evt.target.result.split(',')[1];
-                    if (photoFrame) {
-                        photoFrame.innerHTML = `<img src="${evt.target.result}" alt="Staged Preview">`;
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-        } else if(tKey === 'remarks') {
+        if(tKey === 'remarks') {
             fieldEl = document.createElement('select');
             parsedUniqueRemarks.forEach(rem => {
                 const opt = document.createElement('option');
@@ -313,7 +284,7 @@ function openPopUp(rowId) {
             fieldEl.type = 'text'; fieldEl.value = currentVal;
         }
         
-        fieldEl.id = 'modal-input-' + tKey.replace(/[^a-zA-SU-Z0-9]/g, '-');
+        fieldEl.id = 'modal-input-' + tKey.replace('/', '');
         fieldEl.disabled = true;
         
         const label = document.createElement('label');
@@ -322,19 +293,33 @@ function openPopUp(rowId) {
         modalFormContainer.appendChild(wrapper);
     });
     
+    if(uploadPhotoBtn) uploadPhotoBtn.style.display = 'inline-block';
     if(modalEditBtn) modalEditBtn.style.display = 'inline-block';
     if(modalSaveBtn) modalSaveBtn.style.display = 'none';
     if(editModal) editModal.style.display = 'flex';
 }
 
 function setupSystemEventHandlers() {
+    
+    // --- NEW PHOTO UPLOAD BUTTON LISTENER ---
+    if(uploadPhotoBtn) {
+        uploadPhotoBtn.addEventListener('click', () => {
+            const activeRecord = inventoryData.find(r => r._rowId === activeEditIndex);
+            const aKey = headerMapping['article/item'] || headerMapping['article'];
+            const itemCode = encodeURIComponent(activeRecord[aKey] || 'unknown');
+            
+            // 🚨 REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL 🚨
+            const UPLOAD_PAGE_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+            
+            window.open(`${UPLOAD_PAGE_URL}?itemCode=${itemCode}`, '_blank');
+        });
+    }
+    // ----------------------------------------
+
     if(modalEditBtn) {
         modalEditBtn.addEventListener('click', () => {
             const remInput = document.getElementById('modal-input-remarks');
             if(remInput) remInput.disabled = false;
-            const photoInput = document.getElementById('modal-input-photo-link');
-            if(photoInput) photoInput.disabled = false;
-
             modalEditBtn.style.display = 'none';
             if(modalSaveBtn) modalSaveBtn.style.display = 'inline-block';
         });
@@ -342,36 +327,27 @@ function setupSystemEventHandlers() {
 
     if(modalSaveBtn) {
         modalSaveBtn.addEventListener('click', () => {
-            const remIn = document.getElementById('modal-input-remarks');
-            if(!remIn) return;
-            const selection = remIn.value;
+            const selection = document.getElementById('modal-input-remarks').value;
             if(editModal) editModal.style.display = 'none';
             if(customNameModal) customNameModal.style.display = 'flex';
             
-            const confirmBtn = document.getElementById('customConfirmNameBtn');
-            if(confirmBtn) {
-                confirmBtn.onclick = () => {
-                    const opIn = document.getElementById('custom-operator-input');
-                    let name = opIn ? opIn.value : '';
-                    if(!name || name.trim() === '') name = "Noel Rie N. Deliña";
-                    if(customNameModal) customNameModal.style.display = 'none';
-                    transmitUpdateToCloud(selection, name.trim());
-                };
-            }
+            document.getElementById('customConfirmNameBtn').onclick = () => {
+                let name = document.getElementById('custom-operator-input').value;
+                if(!name || name.trim() === '') name = "Noel Rie N. Deliña";
+                customNameModal.style.display = 'none';
+                transmitUpdateToCloud(selection, name.trim());
+            };
             
-            const cancelBtn = document.getElementById('customCancelNameBtn');
-            if(cancelBtn) {
-                cancelBtn.onclick = () => {
-                    if(customNameModal) customNameModal.style.display = 'none';
-                    if(editModal) editModal.style.display = 'flex';
-                };
-            }
+            document.getElementById('customCancelNameBtn').onclick = () => {
+                customNameModal.style.display = 'none';
+                if(editModal) editModal.style.display = 'flex';
+            };
         });
     }
 
-    if(modalCloseBtn) {
-        modalCloseBtn.addEventListener('click', () => { if(editModal) editModal.style.display = 'none'; });
-    }
+    if(modalCloseBtn) modalCloseBtn.addEventListener('click', () => {
+        if(editModal) editModal.style.display = 'none';
+    });
 
     if(exportButton) {
         exportButton.addEventListener('click', () => {
@@ -396,67 +372,21 @@ async function transmitUpdateToCloud(remark, user) {
     const aKey = headerMapping['article/item'] || headerMapping['article'];
     const itemCode = String(activeRecord[aKey] || '').trim();
 
-    let finalTimestamp = new Date().toLocaleString('en-US');
-    let imageUrl = ""; // This will hold our final ImageKit link
+    const timestamp = new Date().toLocaleString('en-US', { 
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true 
+    });
 
-    // 📸 CHECK AND PARSE SELECTED GALLERY IMAGE
-    if (modalPhotoInput && modalPhotoInput.files.length > 0) {
-        const file = modalPhotoInput.files[0];
-        showLoading("Extracting metadata & uploading to cloud...");
-
-        // 1. Get EXIF Timestamp
-        finalTimestamp = await new Promise((resolve) => {
-            EXIF.getData(file, function() {
-                const exifDateTime = EXIF.getTag(this, "DateTimeOriginal") || EXIF.getTag(this, "DateTime");
-                if (exifDateTime) {
-                    const parts = exifDateTime.split(" ");
-                    const dateParts = parts[0].split(":");
-                    resolve(`${dateParts[1]}/${dateParts[2]}/${dateParts[0]}, ${parts[1]}`);
-                } else {
-                    resolve(finalTimestamp);
-                }
-            });
-        });
-
-        // 2. Upload to ImageKit (Directly from Browser)
-        try {
-            // Note: Ensure ImageKit SDK is initialized globally as shown in previous step
-            const result = await new Promise((resolve, reject) => {
-                imagekit.upload({
-                    file: file,
-                    fileName: `Survey_${itemCode}_${Date.now()}.jpg`,
-                    folder: "/survey-data"
-                }, (err, res) => {
-                    if (err) reject(err);
-                    else resolve(res);
-                });
-            });
-            imageUrl = result.url; // This is the public link to the image
-            console.log("Image successfully hosted at:", imageUrl);
-        } catch (err) {
-            console.error("ImageKit Upload Error:", err);
-            alert("Image upload failed. Check your ImageKit settings.");
-            hideLoading();
-            return;
-        }
-    }
-
-    // 3. Prepare parameters for Google Apps Script
     const bodyParams = new URLSearchParams();
     bodyParams.append("article", itemCode);
     bodyParams.append("remarks", remark);
     bodyParams.append("updatedby", user);
-    bodyParams.append("timestamp", finalTimestamp); 
-    
-    // Send the URL instead of the massive base64 string
-    if (imageUrl) {
-        bodyParams.append("imageURL", imageUrl); 
-    }
+    bodyParams.append("timestamp", timestamp);
 
-    if(modalPhotoInput) modalPhotoInput.value = ""; 
-    if(photoUploadGroup) photoUploadGroup.style.display = 'none';
-
-    showLoading("Saving update to Google Sheets...");
+    statusBanner.style.backgroundColor = "#ffeb3b";
+    statusBanner.style.color = "#333";
+    statusBanner.textContent = "Transmitting modifications to Google Apps Script gateway...";
+    showLoading("Publishing updates...");
     
     try {
         await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -464,13 +394,26 @@ async function transmitUpdateToCloud(remark, user) {
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: bodyParams.toString()
         });
-        
-        setTimeout(() => { 
-            hideLoading();
-            loadInventoryFromGoogleSheets(); 
-        }, 1500);
+        setTimeout(() => { loadInventoryFromGoogleSheets(); }, 1200);
     } catch(e) {
         console.error(e);
-        hideLoading();
+        setTimeout(() => { loadInventoryFromGoogleSheets(); }, 1000);
     }
+}
+
+function executeSearch() {
+    if(!searchInput || !remarksFilter || !typeFilter) return;
+
+    const term = searchInput.value.toLowerCase().trim();
+    const remarkSel = remarksFilter.value;
+    const typeSel = typeFilter.value;
+    const rKey = headerMapping['remarks'];
+    const tKey = headerMapping['type'];
+    
+    let filtered = inventoryData;
+    if(remarkSel !== "ALL" && rKey) filtered = filtered.filter(row => (row[rKey] || '').trim() === remarkSel);
+    if(typeSel !== "ALL" && tKey) filtered = filtered.filter(row => (row[tKey] || '').trim() === typeSel);
+    if(term) filtered = filtered.filter(row => rawHeaders.some(h => String(row[h]).toLowerCase().includes(term)));
+    
+    renderTable(filtered);
 }
