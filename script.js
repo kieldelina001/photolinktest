@@ -1,5 +1,5 @@
 // 🔑 Google Sheets Cloud Gateway Architecture
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxg14CWxLWRYy8q8AEN50aMeUWPJN4nrURSXL0I4I6lyFubPjyH_eyQy5KJtxN6iY02eg/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrqoIQ1yjd5XiGIPb9FLnxLI2LTgNJFV1ug-klApiKfNScxd_CX07o2nYYk_4lnvTBPw/exec";
 const SPREADSHEET_ID = "1ndgXDoLL4LoB3YWnSugfYINW5S8ouN8SlVLZsrkH7A8";
 const GOOGLE_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=0`;
 const BACKUP_FILE_NAME = "real_estate_inventory_backup.csv"; 
